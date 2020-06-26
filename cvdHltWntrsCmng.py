@@ -38,7 +38,6 @@ totalIdx = pd.date_range(df.index[0],periods=dataLen+predDayCount,freq='D')
 
 #df["Cases"][:pd.to_datetime("19.3.2020",format="%d.%m.%Y")]
 
-
 #%% measure metrics
 def mape(a, b): 
     mask = a != 0
@@ -120,7 +119,7 @@ def ar(data,maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2):
     model = AR(train)
     model = model.fit(maxlag=maxlag,method=metod,trend=trend,ic=lagOpt)
     pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
-    
+    pred = pd.DataFrame(pred)
     maev = mae(test,pred[:len(test)])
     rmsev = rmse(test,pred[:len(test)])
     mapev = mape(test,pred[:len(test)])
@@ -133,7 +132,10 @@ def ar(data,maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2):
 ## default values (maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2)
 Cases_Ar,Cases_Ar_Measure = ar(data=df['Cases'])
 Deaths_Ar,Death_Ar_Measure = ar(data=df['Deaths'])
+Cases_Ar.rename(columns={0:"Cases_predict_ar"},inplace=True)
+Deaths_Ar.rename(columns={0:"Deaths_predict_ar"},inplace=True)
 
+finalDf = pd.concat(finalDf,Cases_Ar,Deaths_Ar)
 #%% measure
 print("----Cases Measure----")
 print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
