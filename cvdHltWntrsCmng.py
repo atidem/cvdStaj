@@ -140,7 +140,7 @@ finalDf = pd.concat([finalDf,Cases_Ar,Deaths_Ar],axis=1)
 #%% ARIMA
 
 #there is something wrong this block
-def arimaParametersFounder(data,startP=0,startQ=0,maxP=4,maxQ=4,testRate=0.2):
+def arimaParametersFounder(data,startP=0,startQ=0,maxP=7,maxQ=7,testRate=0.2):
     dataPos = data[data>0]
     dataPosLen = len(dataPos)
     
@@ -168,14 +168,16 @@ def arima(data,p,d,q,testRate=0.2):
     
     return pred,measure
 
+#parameter search
+#model=arimaParametersFounder(data=df['Cases'])
+#model.summary()
 # ARIMA Prediction Section
-
-Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=0,d=2,q=0)
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=2,q=0)
 Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=2,q=0)
 Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
-
+finalDf = pd.concat([finalDf,Cases_Arima,Deaths_Arima],axis=1)
 #%% measure
 print("----Cases Measure----")
 print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
@@ -189,6 +191,10 @@ print("..............................................................")
 print("MAE AR : " + str(Cases_Ar_Measure["mae"]))
 print("RMSE AR : " + str(Cases_Ar_Measure["rmse"]))
 print("MAPE AR : " + str(Cases_Ar_Measure["mape"]))
+print("..............................................................")
+print("MAE ARIMA : " + str(Cases_Arima_Measure["mae"]))
+print("RMSE ARIMA : " + str(Cases_Arima_Measure["rmse"]))
+print("MAPE ARIMA : " + str(Cases_Arima_Measure["mape"]))
 print("\n")
 
 print("----Deaths Measure----")
@@ -203,6 +209,10 @@ print("..............................................................")
 print("MAE AR : " + str(Death_Ar_Measure["mae"]))
 print("RMSE AR : " + str(Death_Ar_Measure["rmse"]))
 print("MAPE AR : " + str(Death_Ar_Measure["mape"]))
+print("..............................................................")
+print("MAE ARIMA : " + str(Deaths_Arima_Measure["mae"]))
+print("RMSE ARIMA : " + str(Deaths_Arima_Measure["rmse"]))
+print("MAPE ARIMA : " + str(Deaths_Arima_Measure["mape"]))
 print("\n")
 
 
@@ -241,6 +251,20 @@ ax1.legend()
 
 plt.show()
 
+#%% visualize ARIMA
+
+fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+
+ax0.plot(finalDf['Cases'],label='Cases')
+ax0.plot(finalDf['Cases_predict_arima'],label='Cases_predict_ar')
+
+ax1.plot(finalDf['Deaths'],label='Deaths')
+ax1.plot(finalDf['Deaths_predict_arima'],label='Deaths_predict_ar')
+
+ax0.legend()
+ax1.legend()
+
+plt.show()
 
 #%% print screen (Prediction)
 #pd.set_option("display.max_rows", None, "display.max_columns", None)
