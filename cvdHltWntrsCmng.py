@@ -135,7 +135,8 @@ Deaths_Ar,Death_Ar_Measure = ar(data=df['Deaths'])
 Cases_Ar.rename(columns={0:"Cases_predict_ar"},inplace=True)
 Deaths_Ar.rename(columns={0:"Deaths_predict_ar"},inplace=True)
 
-finalDf = pd.concat(finalDf,Cases_Ar,Deaths_Ar)
+finalDf = pd.concat([finalDf,Cases_Ar,Deaths_Ar],axis=1)
+
 #%% measure
 print("----Cases Measure----")
 print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
@@ -187,12 +188,13 @@ print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_
 
 #%% save csv file
 
-yazdir = pd.DataFrame()
-yazdir['Cases_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul']
-yazdir['Cases_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add']
-yazdir['Deaths_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul']
-yazdir['Deaths_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add']
-yazdir.to_csv("predict.csv")
+#yazdir = pd.DataFrame()
+#yazdir['Cases_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul']
+#yazdir['Cases_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add']
+#yazdir['Deaths_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul']
+#yazdir['Deaths_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add']
+#yazdir.to_csv("predict.csv")
+finalDf.to_csv("predict.csv")
 
 #%%
 
