@@ -7,9 +7,10 @@ Created on Sat Jun  6 22:23:07 2020
 
 import pandas as pd 
 import numpy as np
-import copy 
 from statsmodels.tsa.holtwinters import ExponentialSmoothing 
-from statsmodels.tsa.ar_model import AR,AutoReg,ARResults
+from statsmodels.tsa.ar_model import AR,ARResults
+from statsmodels.tsa.arima_model import ARIMA,ARMA,ARIMAResults,ARMAResults
+from pmdarima import auto_arima
 from sklearn.metrics import mean_absolute_error,mean_squared_error
 import matplotlib.pyplot as plt
 import warnings
@@ -39,7 +40,7 @@ totalIdx = pd.date_range(df.index[0],periods=dataLen+predDayCount,freq='D')
 #df["Cases"][:pd.to_datetime("19.3.2020",format="%d.%m.%Y")]
 
 #%% measure metrics
-def mape(a, b): 
+def mape(a,b): 
     mask = a != 0
     return (np.fabs(a - b)/a)[mask].mean()
 
@@ -77,7 +78,7 @@ def holtWinters(data,alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal
     pred["Predicted_Values"] = pd.Series(model.predict(model.params,start=df.index[-1],end=totalIdx[-1]),index=totalIdx[dataLen-1:])
     return pred
 
-#%% Holt Winters Prediction Section 
+## Holt Winters Prediction Section 
 ## default values (alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal='add',period=None,damp=False)
 Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',period=12,damp=True)
 Case_mul_mul.rename(columns={"Fitted_Values":"Cases_hw_tes_mul-mul","Predicted_Values": "Cases_predict_hw_tes_mul"},inplace=True)
@@ -120,22 +121,63 @@ def ar(data,maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2):
     model = model.fit(maxlag=maxlag,method=metod,trend=trend,ic=lagOpt)
     pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
     pred = pd.DataFrame(pred)
-    maev = mae(test,pred[:len(test)])
-    rmsev = rmse(test,pred[:len(test)])
-    mapev = mape(test,pred[:len(test)])
-    
+    maev = mae(test,pred[0][:len(test)])
+    rmsev = rmse(test,pred[0][:len(test)])
+    mapev = mape(pred[0][:len(test)],test)
+
     measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
     
     return pred,measure
 
-#%%  AR Prediction Section
+#  AR Prediction Section
 ## default values (maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2)
 Cases_Ar,Cases_Ar_Measure = ar(data=df['Cases'])
 Deaths_Ar,Death_Ar_Measure = ar(data=df['Deaths'])
 Cases_Ar.rename(columns={0:"Cases_predict_ar"},inplace=True)
 Deaths_Ar.rename(columns={0:"Deaths_predict_ar"},inplace=True)
 
-finalDf = pd.concat(finalDf,Cases_Ar,Deaths_Ar)
+finalDf = pd.concat([finalDf,Cases_Ar,Deaths_Ar],axis=1)
+#%% ARIMA
+
+#there is something wrong this block
+def arimaParametersFounder(data,startP=0,startQ=0,maxP=7,maxQ=7,testRate=0.2):
+    dataPos = data[data>0]
+    dataPosLen = len(dataPos)
+    
+    splitIndex = int(dataPosLen*(1-testRate))
+    train = dataPos[:splitIndex]    
+    model = auto_arima(train,start_p=startP,start_q=startQ,max_p=maxP,max_q=maxQ,seasonal=False,trace=True)
+    return model   
+    
+def arima(data,p,d,q,testRate=0.2):
+    dataPos = data[data>0]
+    dataPosLen = len(dataPos)
+    
+    splitIndex = int(dataPosLen*(1-testRate))
+    train = dataPos[:splitIndex]
+    test = dataPos[splitIndex:]
+
+    model = ARIMA(train,order=(p,d,q)).fit()
+    pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
+    pred = pd.DataFrame(pred)
+    maev = mae(test,pred[0][:len(test)])
+    rmsev = rmse(test,pred[0][:len(test)])
+    mapev = mape(pred[0][:len(test)],test)
+    
+    measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
+    
+    return pred,measure
+
+#parameter search
+#model=arimaParametersFounder(data=df['Cases'])
+#model.summary()
+# ARIMA Prediction Section
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=2,q=0)
+Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=2,q=0)
+Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
+Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
+
+finalDf = pd.concat([finalDf,Cases_Arima,Deaths_Arima],axis=1)
 #%% measure
 print("----Cases Measure----")
 print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
@@ -146,6 +188,14 @@ print("MAE TES ADD : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_
 print("RMSE TES ADD : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
 print("MAPE TES ADD : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
 print("..............................................................")
+print("MAE AR : " + str(Cases_Ar_Measure["mae"]))
+print("RMSE AR : " + str(Cases_Ar_Measure["rmse"]))
+print("MAPE AR : " + str(Cases_Ar_Measure["mape"]))
+print("..............................................................")
+print("MAE ARIMA : " + str(Cases_Arima_Measure["mae"]))
+print("RMSE ARIMA : " + str(Cases_Arima_Measure["rmse"]))
+print("MAPE ARIMA : " + str(Cases_Arima_Measure["mape"]))
+print("\n")
 
 print("----Deaths Measure----")
 print("MAE TES ADD : "+str(mae(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
@@ -156,8 +206,17 @@ print("MAE TES MULT : "+str(mae(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_h
 print("RMSE TES MULT : "+str(rmse(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
 print("MAPE TES MULT : "+str(mape(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
 print("..............................................................")
+print("MAE AR : " + str(Death_Ar_Measure["mae"]))
+print("RMSE AR : " + str(Death_Ar_Measure["rmse"]))
+print("MAPE AR : " + str(Death_Ar_Measure["mape"]))
+print("..............................................................")
+print("MAE ARIMA : " + str(Deaths_Arima_Measure["mae"]))
+print("RMSE ARIMA : " + str(Deaths_Arima_Measure["rmse"]))
+print("MAPE ARIMA : " + str(Deaths_Arima_Measure["mape"]))
+print("\n")
 
-#%% visualize
+
+#%% visualize Holt Winters
 fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
 
 ax0.plot(finalDf['Cases'],label='Cases')
@@ -177,22 +236,53 @@ ax1.legend()
 
 plt.show()
 
-#%% print screen (Prediction)
-pd.set_option("display.max_rows", None, "display.max_columns", None)
+#%% visualize AR
 
-print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul'])
-print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add'])
-print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul'])
-print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add'])
+fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+
+ax0.plot(finalDf['Cases'],label='Cases')
+ax0.plot(finalDf['Cases_predict_ar'],label='Cases_predict_ar')
+
+ax1.plot(finalDf['Deaths'],label='Deaths')
+ax1.plot(finalDf['Deaths_predict_ar'],label='Deaths_predict_ar')
+
+ax0.legend()
+ax1.legend()
+
+plt.show()
+
+#%% visualize ARIMA
+
+fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+
+ax0.plot(finalDf['Cases'],label='Cases')
+ax0.plot(finalDf['Cases_predict_arima'],label='Cases_predict_ar')
+
+ax1.plot(finalDf['Deaths'],label='Deaths')
+ax1.plot(finalDf['Deaths_predict_arima'],label='Deaths_predict_ar')
+
+ax0.legend()
+ax1.legend()
+
+plt.show()
+
+#%% print screen (Prediction)
+#pd.set_option("display.max_rows", None, "display.max_columns", None)
+#
+#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul'])
+#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add'])
+#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul'])
+#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add'])
 
 #%% save csv file
 
-yazdir = pd.DataFrame()
-yazdir['Cases_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul']
-yazdir['Cases_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add']
-yazdir['Deaths_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul']
-yazdir['Deaths_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add']
-yazdir.to_csv("predict.csv")
+#yazdir = pd.DataFrame()
+#yazdir['Cases_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul']
+#yazdir['Cases_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add']
+#yazdir['Deaths_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul']
+#yazdir['Deaths_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add']
+#yazdir.to_csv("predict.csv")
+finalDf.to_csv("predict.csv")
 
 #%%
 
