@@ -20,7 +20,10 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 #%% Parameters
-
+def comon():
+    print("comom")
+    
+comon()
 #%%
 ##!!! seperator can change ; to ,
 df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
@@ -148,7 +151,7 @@ finalDf = pd.concat([finalDf,Cases_Ar,Deaths_Ar],axis=1)
 #%% ARIMA
 
 #there is something wrong this block
-def arimaParametersFounder(data,startP=0,startQ=0,maxP=7,maxQ=7,testRate=0.2):
+def arimaParametersFounder(data,startP=0,startQ=0,maxP=4,maxQ=4,testRate=0.2):
     dataPos = data[data>0]
     dataPosLen = len(dataPos)
     
@@ -186,6 +189,35 @@ Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
 finalDf = pd.concat([finalDf,Cases_Arima,Deaths_Arima],axis=1)
+
+#%% ARMA
+#
+#def arma(data,p,q,testRate=0.2):
+#    dataPos = data[data>0]
+#    dataPosLen = len(dataPos)
+#    
+#    splitIndex = int(dataPosLen*(1-testRate))
+#    train = dataPos[:splitIndex]
+#    test = dataPos[splitIndex:]
+#
+#    model = ARMA(train,order=(p,q)).fit()
+#    pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
+#    pred = pd.DataFrame(pred)
+#    maev = mae(test,pred[0][:len(test)])
+#    rmsev = rmse(test,pred[0][:len(test)])
+#    mapev = mape(pred[0][:len(test)],test)
+#    
+#    measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
+#    
+#    return pred,measure
+#
+## ARMA Prediction Section
+#Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=0,q=0)
+#Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=0,q=0)
+#Cases_Arma.rename(columns={0:"Cases_predict_arma"},inplace=True)
+#Deaths_Arma.rename(columns={0:"Deaths_predict_arma"},inplace=True)
+#
+#finalDf = pd.concat([finalDf,Cases_Arma,Deaths_Arma],axis=1)
 #%% measure
 print("----Cases Measure----")
 print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
@@ -264,16 +296,30 @@ plt.show()
 fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
 
 ax0.plot(finalDf['Cases'],label='Cases')
-ax0.plot(finalDf['Cases_predict_arima'],label='Cases_predict_ar')
+ax0.plot(finalDf['Cases_predict_arima'],label='Cases_predict_arima')
 
 ax1.plot(finalDf['Deaths'],label='Deaths')
-ax1.plot(finalDf['Deaths_predict_arima'],label='Deaths_predict_ar')
+ax1.plot(finalDf['Deaths_predict_arima'],label='Deaths_predict_arima')
 
 ax0.legend()
 ax1.legend()
 
 plt.show()
 
+#%% visualize ARMA
+
+#fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+#
+#ax0.plot(finalDf['Cases'],label='Cases')
+#ax0.plot(finalDf['Cases_predict_arma'],label='Cases_predict_arma')
+#
+#ax1.plot(finalDf['Deaths'],label='Deaths')
+#ax1.plot(finalDf['Deaths_predict_arma'],label='Deaths_predict_arma')
+#
+#ax0.legend()
+#ax1.legend()
+#
+#plt.show()
 #%% print screen (Prediction)
 #pd.set_option("display.max_rows", None, "display.max_columns", None)
 #
