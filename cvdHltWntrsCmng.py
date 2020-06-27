@@ -20,7 +20,10 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 #%% Parameters
-
+def comon():
+    print("comom")
+    
+comon()
 #%%
 ##!!! seperator can change ; to ,
 df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
