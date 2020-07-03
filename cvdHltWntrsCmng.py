@@ -36,7 +36,6 @@ predDayCount = 30
 # total range
 totalIdx = pd.date_range(df.index[0],periods=dataLen+predDayCount,freq='D')
 
-
 #df["Cases"][:pd.to_datetime("19.3.2020",format="%d.%m.%Y")]
 
 #%% measure metrics
@@ -312,25 +311,15 @@ ax1.legend()
 
 plt.show()
 #%% print screen (Prediction)
-#pd.set_option("display.max_rows", None, "display.max_columns", None)
-#
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul'])
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add'])
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul'])
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add'])
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+
+cols = list(finalDf.columns)
+
+for i in cols:
+    print(finalDf[finalDf[i].notna()][i])
+    
 
 #%% save csv file
 
-#yazdir = pd.DataFrame()
-#yazdir['Cases_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul']
-#yazdir['Cases_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add']
-#yazdir['Deaths_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul']
-#yazdir['Deaths_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add']
-#yazdir.to_csv("predict.csv")
 finalDf.to_csv("predict.csv")
-
-#%%
-
-    
-
 
