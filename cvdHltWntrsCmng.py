@@ -316,6 +316,7 @@ pd.set_option("display.max_rows", None, "display.max_columns", None)
 cols = list(finalDf.columns)
 
 for i in cols:
+    print(" Results : "+i)
     print(finalDf[finalDf[i].notna()][i])
     
 
