@@ -20,10 +20,7 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 #%% Parameters
-<<<<<<< HEAD
-=======
 
->>>>>>> master
 #%%
 ##!!! seperator can change ; to ,
 df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
@@ -149,7 +146,7 @@ def arimaParametersFounder(data,startP=0,startQ=0,maxP=4,maxQ=4,testRate=0.2):
     
     splitIndex = int(dataPosLen*(1-testRate))
     train = dataPos[:splitIndex]    
-    model = auto_arima(train,start_p=startP,start_q=startQ,max_p=maxP,max_q=maxQ,seasonal=False,trace=True)
+    model = auto_arima(train,start_p=startP,start_q=startQ,max_p=maxP,max_q=maxQ,seasonal=True,trace=True)
     return model   
     
 def arima(data,p,d,q,testRate=0.2):
@@ -174,9 +171,12 @@ def arima(data,p,d,q,testRate=0.2):
 #parameter search
 #model=arimaParametersFounder(data=df['Cases'])
 #model.summary()
+#
+#model=arimaParametersFounder(data=df['Deaths'])
+#model.summary()
 # ARIMA Prediction Section
-Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=1,q=2)
-Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=1,q=2)
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=0,d=2,q=0)
+Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=2,q=0)
 Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
@@ -317,11 +317,6 @@ ax0.plot(finalDf['Cases_predict_arma'],label='Cases_predict_arma')
 ax1.plot(finalDf['Deaths'],label='Deaths')
 ax1.plot(finalDf['Deaths_predict_arma'],label='Deaths_predict_arma')
 
-<<<<<<< HEAD
-#%%
-def FonksiyonPop():
-    print("şükela")
-=======
 ax0.legend()
 ax1.legend()
 
@@ -334,10 +329,6 @@ cols = list(finalDf.columns)
 for i in cols:
     print(" Results : "+i)
     print(finalDf[finalDf[i].notna()][i])
->>>>>>> master
-    
-def FonksiyonPop2():
-    print("caydırıcı")
 
 #%% save csv file
 
