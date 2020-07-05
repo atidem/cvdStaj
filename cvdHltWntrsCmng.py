@@ -335,7 +335,7 @@ for i in cols:
 
 finalDf.to_csv("predict.csv")
 
-#%%optimization try
+#%%optimization tryna
 #from statsmodels.tsa.statespace.sarimax import SARIMAX
 #import itertools
 #
