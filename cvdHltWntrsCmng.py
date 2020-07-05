@@ -140,13 +140,13 @@ finalDf = pd.concat([finalDf,Cases_Ar,Deaths_Ar],axis=1)
 #%% ARIMA
 
 #there is something wrong this block
-def arimaParametersFounder(data,startP=0,startQ=0,maxP=4,maxQ=4,testRate=0.2):
+def arimaParametersFounder(data,startP=0,startQ=0,maxP=10,maxQ=10,testRate=0.2):
     dataPos = data[data>0]
     dataPosLen = len(dataPos)
     
     splitIndex = int(dataPosLen*(1-testRate))
     train = dataPos[:splitIndex]    
-    model = auto_arima(train,start_p=startP,start_q=startQ,max_p=maxP,max_q=maxQ,seasonal=True,trace=True)
+    model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,max_q=maxQ,seasonal=False,trace=True)
     return model   
     
 def arima(data,p,d,q,testRate=0.2):
@@ -172,7 +172,7 @@ def arima(data,p,d,q,testRate=0.2):
 #parameter search
 #model=arimaParametersFounder(data=df['Cases'])
 #model.summary()
-
+##
 #model=arimaParametersFounder(data=df['Deaths'])
 #model.summary()
 # ARIMA Prediction Section
@@ -206,8 +206,8 @@ def arma(data,p,q,testRate=0.2):
     return pred,measure
 
 # ARMA Prediction Section
-Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=0,q=0)
-Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=0,q=0)
+Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=0,q=1)
+Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=1,q=0)
 Cases_Arma.rename(columns={0:"Cases_predict_arma"},inplace=True)
 Deaths_Arma.rename(columns={0:"Deaths_predict_arma"},inplace=True)
 
@@ -335,3 +335,76 @@ for i in cols:
 
 finalDf.to_csv("predict.csv")
 
+#%%optimization try
+#from statsmodels.tsa.statespace.sarimax import SARIMAX
+#import itertools
+#
+#d = range(0,1)
+#p=q=range(0,15)
+#pdq = list(itertools.product(p,d,q))
+#train , test = df.iloc[:60,:] , df.iloc[60:,:]
+#
+#best_pred = list()
+#for param in pdq:
+#    try:
+#        model_arima = SARIMAX(train.Deaths,order=param)
+#        model_arima_fit = model_arima.fit()
+#        best_pred.append([model_arima_fit.aic,param])
+#        print(param,model_arima_fit.aic)
+#    except:
+#        continue
+#    
+#best_pred = np.array(best_pred)
+#aicc = list()
+#
+#for i in range(len(best_pred)-1):
+#  value = float(best_pred[i][0])
+#  aicc.append(value)
+#
+#for i in range(len(best_pred)-1):
+#  if best_pred[i][0] == np.array(aicc).min():
+#    print("best model:",best_pred[i][1])
+#    print("best model aic score:",np.array(aicc).min())
+#    parameters = best_pred[i][1]
+#    break
+#  else:
+#    continue
+#
+#def sarimax(data,p,d,q,testRate=0.2):
+#    dataPos = data[data>0]
+#    dataPosLen = len(dataPos)
+#    dataPos = pd.to_numeric(dataPos,downcast='float')
+#    
+#    splitIndex = int(dataPosLen*(1-testRate))
+#    train = dataPos[:splitIndex]
+#    test = dataPos[splitIndex:]
+#
+#    model = SARIMAX(train,order=(p,d,q))
+#    pred = model.predict(model.params_complete,start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
+#    pred = pd.DataFrame(pred)
+#    maev = mae(test,pred[0][:len(test)])
+#    rmsev = rmse(test,pred[0][:len(test)])
+#    mapev = mape(pred[0][:len(test)],test)
+#    
+#    measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
+#    
+#    return pred,measure
+#
+#Cases_sarimax,Cases_Arma_Measure = sarimax(data=df['Cases'],p=2,q=0,d=9)
+#Deaths_sarimax,Deaths_Arma_Measure = sarimax(data=df['Deaths'],p=3,q=0,d=0)
+#Cases_sarimax.rename(columns={0:"Cases_predict_sarimax"},inplace=True)
+#Deaths_sarimax.rename(columns={0:"Deaths_predict_sarimax"},inplace=True)
+#finalDf = pd.concat([finalDf,Cases_sarimax,Deaths_sarimax],axis=1)
+#
+#fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+#
+#ax0.plot(finalDf['Cases'],label='Cases')
+#ax0.plot(finalDf['Cases_predict_sarimax'],label='Cases_predict_sarimax')
+#
+#ax1.plot(finalDf['Deaths'],label='Deaths')
+#ax1.plot(finalDf['Deaths_predict_sarimax'],label='Deaths_predict_sarimax')
+#
+#ax0.legend()
+#ax1.legend()
+#
+#plt.show()
