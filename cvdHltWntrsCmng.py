@@ -20,7 +20,10 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 #%% Parameters
+<<<<<<< HEAD
+=======
 
+>>>>>>> master
 #%%
 ##!!! seperator can change ; to ,
 df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
@@ -314,6 +317,11 @@ ax0.plot(finalDf['Cases_predict_arma'],label='Cases_predict_arma')
 ax1.plot(finalDf['Deaths'],label='Deaths')
 ax1.plot(finalDf['Deaths_predict_arma'],label='Deaths_predict_arma')
 
+<<<<<<< HEAD
+#%%
+def FonksiyonPop():
+    print("şükela")
+=======
 ax0.legend()
 ax1.legend()
 
@@ -326,7 +334,10 @@ cols = list(finalDf.columns)
 for i in cols:
     print(" Results : "+i)
     print(finalDf[finalDf[i].notna()][i])
+>>>>>>> master
     
+def FonksiyonPop2():
+    print("caydırıcı")
 
 #%% save csv file
 
