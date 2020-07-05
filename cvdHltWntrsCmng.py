@@ -146,7 +146,7 @@ def arimaParametersFounder(data,startP=0,startQ=0,maxP=10,maxQ=10,testRate=0.2):
     
     splitIndex = int(dataPosLen*(1-testRate))
     train = dataPos[:splitIndex]    
-    model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,max_q=maxQ,seasonal=False,trace=True)
+    model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,stationary=True,max_q=maxQ,seasonal=False,trace=True)
     return model   
     
 def arima(data,p,d,q,testRate=0.2):
@@ -176,8 +176,8 @@ def arima(data,p,d,q,testRate=0.2):
 #model=arimaParametersFounder(data=df['Deaths'])
 #model.summary()
 # ARIMA Prediction Section
-Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=0,d=2,q=0)
-Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=2,q=0)
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=1,d=2,q=2)
+Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=1,d=2,q=2)
 Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
