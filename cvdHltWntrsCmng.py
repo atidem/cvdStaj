@@ -331,5 +331,7 @@ finalDf.to_csv("predict.csv")
 def FonksiyonPop():
     print("şükela")
     
+def FonksiyonPop2():
+    print("caydırıcı")
 
 
