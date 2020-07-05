@@ -152,6 +152,7 @@ def arimaParametersFounder(data,startP=0,startQ=0,maxP=4,maxQ=4,testRate=0.2):
 def arima(data,p,d,q,testRate=0.2):
     dataPos = data[data>0]
     dataPosLen = len(dataPos)
+    dataPos = pd.to_numeric(dataPos,downcast='float')
     
     splitIndex = int(dataPosLen*(1-testRate))
     train = dataPos[:splitIndex]
@@ -171,7 +172,7 @@ def arima(data,p,d,q,testRate=0.2):
 #parameter search
 #model=arimaParametersFounder(data=df['Cases'])
 #model.summary()
-#
+
 #model=arimaParametersFounder(data=df['Deaths'])
 #model.summary()
 # ARIMA Prediction Section
