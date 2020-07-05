@@ -20,6 +20,10 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 #%% Parameters
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
 #%%
 ##!!! seperator can change ; to ,
 df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
@@ -34,7 +38,6 @@ dataPosLen = len(dataPos)
 predDayCount = 30
 # total range
 totalIdx = pd.date_range(df.index[0],periods=dataLen+predDayCount,freq='D')
-
 
 #df["Cases"][:pd.to_datetime("19.3.2020",format="%d.%m.%Y")]
 
@@ -131,8 +134,8 @@ def ar(data,maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2):
 
 #  AR Prediction Section
 ## default values (maxlag=None,metod='cmle',lagOpt='t-stat',trend='nc',testRate=0.2)
-Cases_Ar,Cases_Ar_Measure = ar(data=df['Cases'])
-Deaths_Ar,Death_Ar_Measure = ar(data=df['Deaths'])
+Cases_Ar,Cases_Ar_Measure = ar(data=df['Cases'],trend='c')
+Deaths_Ar,Death_Ar_Measure = ar(data=df['Deaths'],trend='c')
 Cases_Ar.rename(columns={0:"Cases_predict_ar"},inplace=True)
 Deaths_Ar.rename(columns={0:"Deaths_predict_ar"},inplace=True)
 
@@ -172,41 +175,42 @@ def arima(data,p,d,q,testRate=0.2):
 #model=arimaParametersFounder(data=df['Cases'])
 #model.summary()
 # ARIMA Prediction Section
-Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=2,q=0)
-Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=2,q=0)
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=1,q=2)
+Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=1,q=2)
 Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
 finalDf = pd.concat([finalDf,Cases_Arima,Deaths_Arima],axis=1)
 
 #%% ARMA
-#
-#def arma(data,p,q,testRate=0.2):
-#    dataPos = data[data>0]
-#    dataPosLen = len(dataPos)
-#    
-#    splitIndex = int(dataPosLen*(1-testRate))
-#    train = dataPos[:splitIndex]
-#    test = dataPos[splitIndex:]
-#
-#    model = ARMA(train,order=(p,q)).fit()
-#    pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
-#    pred = pd.DataFrame(pred)
-#    maev = mae(test,pred[0][:len(test)])
-#    rmsev = rmse(test,pred[0][:len(test)])
-#    mapev = mape(pred[0][:len(test)],test)
-#    
-#    measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
-#    
-#    return pred,measure
-#
-## ARMA Prediction Section
-#Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=0,q=0)
-#Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=0,q=0)
-#Cases_Arma.rename(columns={0:"Cases_predict_arma"},inplace=True)
-#Deaths_Arma.rename(columns={0:"Deaths_predict_arma"},inplace=True)
-#
-#finalDf = pd.concat([finalDf,Cases_Arma,Deaths_Arma],axis=1)
+
+def arma(data,p,q,testRate=0.2):
+    dataPos = data[data>0]
+    dataPosLen = len(dataPos)
+    dataPos = pd.to_numeric(dataPos,downcast='float')
+    
+    splitIndex = int(dataPosLen*(1-testRate))
+    train = dataPos[:splitIndex]
+    test = dataPos[splitIndex:]
+
+    model = ARMA(train,order=(p,q)).fit()
+    pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
+    pred = pd.DataFrame(pred)
+    maev = mae(test,pred[0][:len(test)])
+    rmsev = rmse(test,pred[0][:len(test)])
+    mapev = mape(pred[0][:len(test)],test)
+    
+    measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
+    
+    return pred,measure
+
+# ARMA Prediction Section
+Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=0,q=0)
+Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=0,q=0)
+Cases_Arma.rename(columns={0:"Cases_predict_arma"},inplace=True)
+Deaths_Arma.rename(columns={0:"Deaths_predict_arma"},inplace=True)
+
+finalDf = pd.concat([finalDf,Cases_Arma,Deaths_Arma],axis=1)
 #%% measure
 print("----Cases Measure----")
 print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
@@ -220,6 +224,10 @@ print("..............................................................")
 print("MAE AR : " + str(Cases_Ar_Measure["mae"]))
 print("RMSE AR : " + str(Cases_Ar_Measure["rmse"]))
 print("MAPE AR : " + str(Cases_Ar_Measure["mape"]))
+print("..............................................................")
+print("MAE ARMA : " + str(Cases_Arma_Measure["mae"]))
+print("RMSE ARMA : " + str(Cases_Arma_Measure["rmse"]))
+print("MAPE ARMA : " + str(Cases_Arma_Measure["mape"]))
 print("..............................................................")
 print("MAE ARIMA : " + str(Cases_Arima_Measure["mae"]))
 print("RMSE ARIMA : " + str(Cases_Arima_Measure["rmse"]))
@@ -238,6 +246,10 @@ print("..............................................................")
 print("MAE AR : " + str(Death_Ar_Measure["mae"]))
 print("RMSE AR : " + str(Death_Ar_Measure["rmse"]))
 print("MAPE AR : " + str(Death_Ar_Measure["mape"]))
+print("..............................................................")
+print("MAE ARMA : " + str(Deaths_Arma_Measure["mae"]))
+print("RMSE ARMA : " + str(Deaths_Arma_Measure["rmse"]))
+print("MAPE ARMA : " + str(Deaths_Arma_Measure["mape"]))
 print("..............................................................")
 print("MAE ARIMA : " + str(Deaths_Arima_Measure["mae"]))
 print("RMSE ARIMA : " + str(Deaths_Arima_Measure["rmse"]))
@@ -297,41 +309,37 @@ plt.show()
 
 #%% visualize ARMA
 
-#fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
-#
-#ax0.plot(finalDf['Cases'],label='Cases')
-#ax0.plot(finalDf['Cases_predict_arma'],label='Cases_predict_arma')
-#
-#ax1.plot(finalDf['Deaths'],label='Deaths')
-#ax1.plot(finalDf['Deaths_predict_arma'],label='Deaths_predict_arma')
-#
-#ax0.legend()
-#ax1.legend()
-#
-#plt.show()
-#%% print screen (Prediction)
-#pd.set_option("display.max_rows", None, "display.max_columns", None)
-#
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul'])
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add'])
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul'])
-#print(finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add'])
+fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
 
-#%% save csv file
+ax0.plot(finalDf['Cases'],label='Cases')
+ax0.plot(finalDf['Cases_predict_arma'],label='Cases_predict_arma')
 
-#yazdir = pd.DataFrame()
-#yazdir['Cases_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_mul']
-#yazdir['Cases_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Cases_predict_hw_tes_add']
-#yazdir['Deaths_predict_hw_tes_mul']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_mul']
-#yazdir['Deaths_predict_hw_tes_add']=finalDf[finalDf.Deaths_predict_hw_tes_mul.notna()]['Deaths_predict_hw_tes_add']
-#yazdir.to_csv("predict.csv")
-finalDf.to_csv("predict.csv")
+ax1.plot(finalDf['Deaths'],label='Deaths')
+ax1.plot(finalDf['Deaths_predict_arma'],label='Deaths_predict_arma')
 
+<<<<<<< HEAD
 #%%
 def FonksiyonPop():
     print("şükela")
+=======
+ax0.legend()
+ax1.legend()
+
+plt.show()
+#%% print screen (Prediction)
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+
+cols = list(finalDf.columns)
+
+for i in cols:
+    print(" Results : "+i)
+    print(finalDf[finalDf[i].notna()][i])
+>>>>>>> master
     
 def FonksiyonPop2():
     print("caydırıcı")
 
+#%% save csv file
+
+finalDf.to_csv("predict.csv")
 
