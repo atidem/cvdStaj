@@ -20,10 +20,6 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 #%% Parameters
-def comon():
-    print("comom")
-    
-comon()
 #%%
 ##!!! seperator can change ; to ,
 df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
@@ -67,13 +63,6 @@ damped   = True , False
 
 Gonna add user interface 
 """
-
-def welcome():
-    print("merhaba")
-
-welcome()
-
-
 
 def holtWinters(data,alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal='add',period=None,damp=False):
     if (tren=='mul' or seasonal=='mul' ):
@@ -339,7 +328,8 @@ plt.show()
 finalDf.to_csv("predict.csv")
 
 #%%
-
+def FonksiyonPop():
+    print("şükela")
     
 
 
