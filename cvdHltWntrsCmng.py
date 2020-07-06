@@ -176,8 +176,8 @@ def arima(data,p,d,q,testRate=0.2):
 #model=arimaParametersFounder(data=df['Deaths'])
 #model.summary()
 # ARIMA Prediction Section
-Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=1,d=2,q=2)
-Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=1,d=2,q=2)
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=0,q=1)
+Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=1,d=0,q=0)
 Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
@@ -206,7 +206,7 @@ def arma(data,p,q,testRate=0.2):
     return pred,measure
 
 # ARMA Prediction Section
-Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=0,q=1)
+Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=3,q=1)
 Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=1,q=0)
 Cases_Arma.rename(columns={0:"Cases_predict_arma"},inplace=True)
 Deaths_Arma.rename(columns={0:"Deaths_predict_arma"},inplace=True)
