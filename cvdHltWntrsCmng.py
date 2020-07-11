@@ -408,3 +408,68 @@ finalDf.to_csv("predict.csv")
 #ax1.legend()
 #
 #plt.show()
+#%%  get 1 and 5 in req list for total case ande total death values
+## if doesnt big change on worldometer , it is going to work fine.
+
+import re
+import string
+import pandas as pd 
+import requests
+import pandas as pd
+
+class getDataFromWorldometer:
+    def __init__(self,url):
+        self.req = requests.get(url)
+        self.req = self.cleanHtml(self.req.text)
+    
+    def cleanHtml(self,raw_html):
+        cleanr = re.compile('<.*?>')
+        cleantext = re.sub(cleanr, '', raw_html)
+        lstClean = [ str(x).replace(";","").replace("(","").replace(")","").replace(",",", ") for x in cleantext.strip().split("Highcharts.chart")]
+        return lstClean
+
+    def exportData(self,arg):
+        index = 0;
+        for i in range(len(arg)):
+            if arg[i] == " ":
+                index = i 
+                break
+        
+        data = []
+        deneme = [x.strip().split(",") for x in str(arg[index:]).strip().replace("{","").replace("}","").split(":")]
+        
+        for a in range(len(deneme)):
+            for b in range(len(deneme[a])):
+                deneme[a][b] = str(deneme[a][b]).translate(str.maketrans("","",string.punctuation))
+        
+        for i in range(len(deneme)):
+            if len(deneme[i])>10:
+                data.append(deneme[i])
+                
+        data[0].pop()
+        data[1].pop()
+        data = {"date":data[0],"values":data[1]}
+        return data
+        
+    def handleData(self):
+        Cases = self.exportData(self.req[1])
+        Deaths = self.exportData(self.req[5])
+#        dfCases = pd.DataFrame(Cases[],
+        dfC = pd.DataFrame(Cases["values"],index=Cases["date"],columns=["Cases"])
+        dfD = pd.DataFrame(Deaths["values"],index=Deaths["date"],columns=["Deaths"])
+        dfC = pd.concat([dfC,dfD],axis=1)
+        return dfC
+
+
+url = "https://www.worldometers.info/coronavirus/country/sri-lanka/"
+data = getDataFromWorldometer(url)
+data = data.handleData()
+    
+
+
+##!!! data frame index kolonu date time a çevir ve frekansını günlük olarak ayarla !!!
+
+
+#df = pd.DataFrame(data["Deaths"],index=data["date"])
+#df.index = pd.to_datetime(df.index,format="%m %d")
+#df.index.freq = 'D'
