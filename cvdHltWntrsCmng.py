@@ -13,6 +13,7 @@ from statsmodels.tsa.arima_model import ARIMA,ARMA,ARIMAResults,ARMAResults
 from pmdarima import auto_arima
 from sklearn.metrics import mean_absolute_error,mean_squared_error
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import show
 import warnings
 warnings.filterwarnings("ignore")
 from math import sqrt
@@ -276,8 +277,7 @@ ax1.plot(finalDf['Deaths_predict_hw_tes_mul'],label='Deaths_predict_hw_tes_mul')
 ax0.legend()
 ax1.legend()
 
-plt.show()
-
+#plt.show()
 #%% visualize AR
 
 fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
@@ -291,8 +291,7 @@ ax1.plot(finalDf['Deaths_predict_ar'],label='Deaths_predict_ar')
 ax0.legend()
 ax1.legend()
 
-plt.show()
-
+#plt.show()
 #%% visualize ARIMA
 
 fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
@@ -306,8 +305,7 @@ ax1.plot(finalDf['Deaths_predict_arima'],label='Deaths_predict_arima')
 ax0.legend()
 ax1.legend()
 
-plt.show()
-
+#plt.show()
 #%% visualize ARMA
 
 fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
@@ -321,7 +319,7 @@ ax1.plot(finalDf['Deaths_predict_arma'],label='Deaths_predict_arma')
 ax0.legend()
 ax1.legend()
 
-plt.show()
+#plt.show()
 #%% print screen (Prediction)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
 
@@ -334,6 +332,11 @@ for i in cols:
 #%% save csv file
 
 finalDf.to_csv("predict.csv")
+
+
+#%% show plots finally ("designed for idle :)")
+show()
+
 
 #%%optimization tryna
 #from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -460,8 +463,8 @@ class getDataFromWorldometer:
         dfC = pd.concat([dfC,dfD],axis=1)
         return dfC
 
-
-url = "https://www.worldometers.info/coronavirus/country/sri-lanka/"
+## paste your country page on worldometer
+url = "https://www.worldometers.info/coronavirus/country/hungary/"
 data = getDataFromWorldometer(url)
 data = data.handleData()
     
