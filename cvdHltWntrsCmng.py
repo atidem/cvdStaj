@@ -20,13 +20,17 @@ from math import sqrt
 import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
-#%% Parameters
+import worldometerDataHandler as handle
+#%% Notes 
+## default test rate 0.2 , replaceable (Ar,Arma,Arima)
+## worldometer link , replaceable
 
+#%% get data from worldometer's link
+
+url = "https://www.worldometers.info/coronavirus/country/russia/"
+getData = handle.GetDataFromWorldometer(url)
+df = getData.handleData()
 #%%
-##!!! seperator can change ; to ,
-df = pd.read_csv("Cov19-Tur.csv",index_col='date',sep=';')
-df.index = pd.to_datetime(df.index,format="%d.%m.%Y")
-df.index.freq = 'D'
 
 dataLen = len(df)
 #positivity
@@ -66,31 +70,28 @@ Gonna add user interface
 """
 
 def holtWinters(data,alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal='add',period=None,damp=False):
-    if (tren=='mul' or seasonal=='mul' ):
-        dataPos = data[data>0]
-        dataPosLen = len(dataPos)
-    else:
-        dataPos = data
-        dataPosLen = len(data)
+
+    dataPos = data[data>0]
+    dataPosLen = len(dataPos)
     
     pred = pd.DataFrame(index=totalIdx)
-    model = ExponentialSmoothing(dataPos[:dataPosLen],trend=tren,seasonal=seasonal,seasonal_periods=period,damped=damp)
+    model = ExponentialSmoothing(dataPos[:dataPosLen],trend=tren,seasonal=seasonal,seasonal_periods=dataPosLen-12,damped=damp)
     pred["Fitted_Values"] = model.fit(smoothing_level=alpha,smoothing_slope=beta,smoothing_seasonal=gamma,damping_slope=phi).fittedvalues
     pred["Predicted_Values"] = pd.Series(model.predict(model.params,start=df.index[-1],end=totalIdx[-1]),index=totalIdx[dataLen-1:])
     return pred
 
 ## Holt Winters Prediction Section 
 ## default values (alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal='add',period=None,damp=False)
-Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',period=12,damp=True)
+Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',damp=True)
 Case_mul_mul.rename(columns={"Fitted_Values":"Cases_hw_tes_mul-mul","Predicted_Values": "Cases_predict_hw_tes_mul"},inplace=True)
 
-Case_add_add = holtWinters(data=df.Cases,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',period=80,damp=False)
+Case_add_add = holtWinters(data=df.Cases,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',damp=False)
 Case_add_add.rename(columns={"Fitted_Values":"Cases_hw_tes_add-add","Predicted_Values": "Cases_predict_hw_tes_add"},inplace=True)
 
-Death_mul_mul = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='mul',seasonal='mul',period=75,damp=True)
+Death_mul_mul = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='mul',seasonal='mul',damp=True)
 Death_mul_mul.rename(columns={"Fitted_Values":"Deaths_hw_tes_mul","Predicted_Values": "Deaths_predict_hw_tes_mul"},inplace=True) 
 
-Death_add_add = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',period=80,damp=False)   
+Death_add_add = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',damp=False)   
 Death_add_add.rename(columns={"Fitted_Values":"Deaths_hw_tes_add","Predicted_Values": "Deaths_predict_hw_tes_add"},inplace=True) 
 
 ## merge prediction and main dataframe
@@ -147,7 +148,7 @@ def arimaParametersFounder(data,startP=0,startQ=0,maxP=10,maxQ=10,testRate=0.2):
     
     splitIndex = int(dataPosLen*(1-testRate))
     train = dataPos[:splitIndex]    
-    model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,stationary=True,max_q=maxQ,seasonal=False,trace=True)
+    model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,stationary=False,max_q=maxQ,seasonal=False,trace=True)
     return model   
     
 def arima(data,p,d,q,testRate=0.2):
@@ -170,15 +171,17 @@ def arima(data,p,d,q,testRate=0.2):
     
     return pred,measure
 
-#parameter search
+##parameter search
 #model=arimaParametersFounder(data=df['Cases'])
 #model.summary()
 ##
 #model=arimaParametersFounder(data=df['Deaths'])
 #model.summary()
+
 # ARIMA Prediction Section
-Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=0,q=1)
-Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=1,d=0,q=0)
+Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=0,q=0)
+
+Deaths_Arima,Deaths_Arima_Measure = arima(data=df['Deaths'],p=2,d=0,q=0)
 Cases_Arima.rename(columns={0:"Cases_predict_arima"},inplace=True)
 Deaths_Arima.rename(columns={0:"Deaths_predict_arima"},inplace=True)
 
@@ -207,22 +210,22 @@ def arma(data,p,q,testRate=0.2):
     return pred,measure
 
 # ARMA Prediction Section
-Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=3,q=1)
-Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=1,q=0)
+Cases_Arma,Cases_Arma_Measure = arma(data=df['Cases'],p=2,q=0)
+Deaths_Arma,Deaths_Arma_Measure = arma(data=df['Deaths'],p=2,q=0)
 Cases_Arma.rename(columns={0:"Cases_predict_arma"},inplace=True)
 Deaths_Arma.rename(columns={0:"Deaths_predict_arma"},inplace=True)
 
 finalDf = pd.concat([finalDf,Cases_Arma,Deaths_Arma],axis=1)
 #%% measure
 print("----Cases Measure----")
-print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
-print("RMSE TES MULT : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
-print("MAPE TES MULT : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
-print("..............................................................")
-print("MAE TES ADD : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
-print("RMSE TES ADD : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
-print("MAPE TES ADD : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
-print("..............................................................")
+#print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
+#print("RMSE TES MULT : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
+#print("MAPE TES MULT : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
+#print("..............................................................")
+#print("MAE TES ADD : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
+#print("RMSE TES ADD : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
+#print("MAPE TES ADD : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
+#print("..............................................................")
 print("MAE AR : " + str(Cases_Ar_Measure["mae"]))
 print("RMSE AR : " + str(Cases_Ar_Measure["rmse"]))
 print("MAPE AR : " + str(Cases_Ar_Measure["mape"]))
@@ -237,14 +240,14 @@ print("MAPE ARIMA : " + str(Cases_Arima_Measure["mape"]))
 print("\n")
 
 print("----Deaths Measure----")
-print("MAE TES ADD : "+str(mae(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
-print("RMSE TES ADD: "+str(rmse(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
-print("MAPE TES ADD: "+str(mape(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
-print("..............................................................")
-print("MAE TES MULT : "+str(mae(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
-print("RMSE TES MULT : "+str(rmse(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
-print("MAPE TES MULT : "+str(mape(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
-print("..............................................................")
+#print("MAE TES ADD : "+str(mae(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
+#print("RMSE TES ADD: "+str(rmse(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
+#print("MAPE TES ADD: "+str(mape(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
+#print("..............................................................")
+#print("MAE TES MULT : "+str(mae(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
+#print("RMSE TES MULT : "+str(rmse(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
+#print("MAPE TES MULT : "+str(mape(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
+#print("..............................................................")
 print("MAE AR : " + str(Death_Ar_Measure["mae"]))
 print("RMSE AR : " + str(Death_Ar_Measure["rmse"]))
 print("MAPE AR : " + str(Death_Ar_Measure["mape"]))
@@ -260,7 +263,7 @@ print("\n")
 
 
 #%% visualize Holt Winters
-fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+fig,(ax0,ax1) = plt.subplots(2,figsize=(10,7))
 
 ax0.plot(finalDf['Cases'],label='Cases')
 ax0.plot(finalDf['Cases_hw_tes_mul-mul'],label='Cases_hw_tes_mul-mul')
@@ -280,7 +283,7 @@ ax1.legend()
 #plt.show()
 #%% visualize AR
 
-fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+fig,(ax0,ax1) = plt.subplots(2,figsize=(10,7))
 
 ax0.plot(finalDf['Cases'],label='Cases')
 ax0.plot(finalDf['Cases_predict_ar'],label='Cases_predict_ar')
@@ -294,7 +297,7 @@ ax1.legend()
 #plt.show()
 #%% visualize ARIMA
 
-fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+fig,(ax0,ax1) = plt.subplots(2,figsize=(10,7))
 
 ax0.plot(finalDf['Cases'],label='Cases')
 ax0.plot(finalDf['Cases_predict_arima'],label='Cases_predict_arima')
@@ -308,7 +311,7 @@ ax1.legend()
 #plt.show()
 #%% visualize ARMA
 
-fig,(ax0,ax1) = plt.subplots(2,figsize=(12,8))
+fig,(ax0,ax1) = plt.subplots(2,figsize=(10,7))
 
 ax0.plot(finalDf['Cases'],label='Cases')
 ax0.plot(finalDf['Cases_predict_arma'],label='Cases_predict_arma')
@@ -411,68 +414,11 @@ show()
 #ax1.legend()
 #
 #plt.show()
-#%%  get 1 and 5 in req list for total case ande total death values
-## if doesnt big change on worldometer , it is going to work fine.
 
-import re
-import string
-import pandas as pd 
-import requests
-import pandas as pd
-
-class getDataFromWorldometer:
-    def __init__(self,url):
-        self.req = requests.get(url)
-        self.req = self.cleanHtml(self.req.text)
-    
-    def cleanHtml(self,raw_html):
-        cleanr = re.compile('<.*?>')
-        cleantext = re.sub(cleanr, '', raw_html)
-        lstClean = [ str(x).replace(";","").replace("(","").replace(")","").replace(",",", ") for x in cleantext.strip().split("Highcharts.chart")]
-        return lstClean
-
-    def exportData(self,arg):
-        index = 0;
-        for i in range(len(arg)):
-            if arg[i] == " ":
-                index = i 
-                break
-        
-        data = []
-        deneme = [x.strip().split(",") for x in str(arg[index:]).strip().replace("{","").replace("}","").split(":")]
-        
-        for a in range(len(deneme)):
-            for b in range(len(deneme[a])):
-                deneme[a][b] = str(deneme[a][b]).translate(str.maketrans("","",string.punctuation))
-        
-        for i in range(len(deneme)):
-            if len(deneme[i])>10:
-                data.append(deneme[i])
-                
-        data[0].pop()
-        data[1].pop()
-        data = {"date":data[0],"values":data[1]}
-        return data
-        
-    def handleData(self):
-        Cases = self.exportData(self.req[1])
-        Deaths = self.exportData(self.req[5])
-#        dfCases = pd.DataFrame(Cases[],
-        dfC = pd.DataFrame(Cases["values"],index=Cases["date"],columns=["Cases"])
-        dfD = pd.DataFrame(Deaths["values"],index=Deaths["date"],columns=["Deaths"])
-        dfC = pd.concat([dfC,dfD],axis=1)
-        return dfC
-
+#%%
 ## paste your country page on worldometer
-url = "https://www.worldometers.info/coronavirus/country/hungary/"
-data = getDataFromWorldometer(url)
-data = data.handleData()
-    
+
 
 
 ##!!! data frame index kolonu date time a çevir ve frekansını günlük olarak ayarla !!!
 
-
-#df = pd.DataFrame(data["Deaths"],index=data["date"])
-#df.index = pd.to_datetime(df.index,format="%m %d")
-#df.index.freq = 'D'
