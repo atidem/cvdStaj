@@ -5,8 +5,9 @@ Created on Sun Jul 12 13:51:52 2020
 @author: atidem
 """
 
-##  get 1 and 5 in req list for total case ande total death values(for U.S. 2 and 6)
-## if doesnt big change on worldometer , it is going to work fine.
+##  get 1 and 5 in req list for total case ande total death values(for U.S. 2 and 6),
+##  replaceable for different data    "req[1]" 
+##  if doesnt big change on worldometer , it is going to work fine.
 
 import re
 import string
@@ -58,6 +59,9 @@ class GetDataFromWorldometer:
         if self.url.split("/")[-2] == "us":
             Cases = self.exportData(self.req[2])
             Deaths = self.exportData(self.req[6])
+        elif self.url.split("/")[-2] == "canada":
+            Cases = self.exportData(self.req[3])
+            Deaths = self.exportData(self.req[7])
         else:
             Cases = self.exportData(self.req[1])
             Deaths = self.exportData(self.req[5])
@@ -68,4 +72,12 @@ class GetDataFromWorldometer:
         dfC.index = pd.date_range(pd.to_datetime(str(dfC.index[0]+ " 2020"),format="%b %d %Y"),periods=len(dfC),freq='D')
         dfC.index.freq = 'D'
         return dfC
-    
+
+# çekilen veriler kontrol edilip handle data kısmında req[x] kısmı değiştirilerek uyum sağlanabilir.
+# total cases ve total deaths değişkenleri incelenerek doğru X değeri seçilebilir.
+# doğru X değeri için altta bulunan kodda aa değişkeni incelenip doğru dataların çağırılması sağlanabilir.
+
+#url = "https://www.worldometers.info/coronavirus/country/canada/"
+#getData = GetDataFromWorldometer(url)
+#aa = getData.req
+#df = getData.handleData()

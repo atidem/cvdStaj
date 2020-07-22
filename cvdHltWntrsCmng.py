@@ -24,18 +24,24 @@ import worldometerDataHandler as handle
 #%% Notes 
 ## default test rate 0.2 , replaceable (Ar,Arma,Arima)
 ## worldometer link , replaceable
+## have to search parameter for each country
+## russian data have "did not converge" exception
+## edited library for keep going to work in exception  "lib\site-packages\numpy\linalg\linalg.py" 
+
 
 #%% get data from worldometer's link
-
-url = "https://www.worldometers.info/coronavirus/country/russia/"
+## paste your country page on worldometer
+url = "https://www.worldometers.info/coronavirus/country/turkey/"
 getData = handle.GetDataFromWorldometer(url)
 df = getData.handleData()
 #%%
 
 dataLen = len(df)
 #positivity
-dataPos = df[df.Deaths>0]
-dataPosLen = len(dataPos)
+dataPosDeath = df[df.Deaths>0]
+dataPosLenDeath = len(dataPosDeath)
+dataPosCases = df[df.Cases>0]
+dataPosLenCases = len(dataPosCases)
 # size of predict(daily)
 predDayCount = 30
 # total range
@@ -73,25 +79,26 @@ def holtWinters(data,alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal
 
     dataPos = data[data>0]
     dataPosLen = len(dataPos)
-    
+    #print(dataPos)
     pred = pd.DataFrame(index=totalIdx)
-    model = ExponentialSmoothing(dataPos[:dataPosLen],trend=tren,seasonal=seasonal,seasonal_periods=dataPosLen-12,damped=damp)
+    model = ExponentialSmoothing(dataPos[:dataPosLen],trend=tren,seasonal=seasonal,seasonal_periods=period,damped=damp)
     pred["Fitted_Values"] = model.fit(smoothing_level=alpha,smoothing_slope=beta,smoothing_seasonal=gamma,damping_slope=phi).fittedvalues
+    
     pred["Predicted_Values"] = pd.Series(model.predict(model.params,start=df.index[-1],end=totalIdx[-1]),index=totalIdx[dataLen-1:])
     return pred
 
 ## Holt Winters Prediction Section 
 ## default values (alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal='add',period=None,damp=False)
-Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',damp=True)
+Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',period=12,damp=True)
 Case_mul_mul.rename(columns={"Fitted_Values":"Cases_hw_tes_mul-mul","Predicted_Values": "Cases_predict_hw_tes_mul"},inplace=True)
 
-Case_add_add = holtWinters(data=df.Cases,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',damp=False)
+Case_add_add = holtWinters(data=df.Cases,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',period=dataPosLenCases-1,damp=False)
 Case_add_add.rename(columns={"Fitted_Values":"Cases_hw_tes_add-add","Predicted_Values": "Cases_predict_hw_tes_add"},inplace=True)
 
-Death_mul_mul = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='mul',seasonal='mul',damp=True)
+Death_mul_mul = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='mul',seasonal='mul',period=dataPosLenDeath-1,damp=True)
 Death_mul_mul.rename(columns={"Fitted_Values":"Deaths_hw_tes_mul","Predicted_Values": "Deaths_predict_hw_tes_mul"},inplace=True) 
 
-Death_add_add = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',damp=False)   
+Death_add_add = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',period=dataPosLenDeath-1,damp=False)   
 Death_add_add.rename(columns={"Fitted_Values":"Deaths_hw_tes_add","Predicted_Values": "Deaths_predict_hw_tes_add"},inplace=True) 
 
 ## merge prediction and main dataframe
@@ -415,10 +422,4 @@ show()
 #
 #plt.show()
 
-#%%
-## paste your country page on worldometer
-
-
-
-##!!! data frame index kolonu date time a çevir ve frekansını günlük olarak ayarla !!!
 
