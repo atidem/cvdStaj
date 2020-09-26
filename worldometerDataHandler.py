@@ -21,12 +21,12 @@ class GetDataFromWorldometer:
         self.req = requests.get(self.url)
         self.req = self.cleanHtml(self.req.text)
          
-    
     def cleanHtml(self,raw_html):
         ## clean html tags and split
         cleanr = re.compile('<.*?>')
         cleantext = re.sub(cleanr, '', raw_html)
-        lstClean = [ str(x).replace(";","").replace("(","").replace(")","").replace(",",", ") for x in cleantext.strip().split("Highcharts.chart")]
+        lstClean = [ str(x).replace(";","").replace("(","").replace(")","").
+                    replace(",",", ") for x in cleantext.strip().split("Highcharts.chart")]
         return lstClean
 
     def exportData(self,arg):
@@ -38,7 +38,8 @@ class GetDataFromWorldometer:
                 break
         
         data = []
-        deneme = [x.strip().split(",") for x in str(arg[index:]).strip().replace("{","").replace("}","").split(":")]
+        deneme = [x.strip().split(",") for x in str(arg[index:]).strip().replace("{","").
+                  replace("}","").split(":")]
         
         for a in range(len(deneme)):
             for b in range(len(deneme[a])):
@@ -69,7 +70,8 @@ class GetDataFromWorldometer:
         dfC = pd.DataFrame(Cases["values"],index=Cases["date"],columns=["Cases"])
         dfD = pd.DataFrame(Deaths["values"],index=Deaths["date"],columns=["Deaths"])
         dfC = pd.concat([dfC,dfD],axis=1)
-        dfC.index = pd.date_range(pd.to_datetime(str(dfC.index[0]+ " 2020"),format="%b %d %Y"),periods=len(dfC),freq='D')
+        dfC.index = pd.date_range(pd.to_datetime(str(dfC.index[0]+ " 2020"),
+                                                 format="%b %d %Y"),periods=len(dfC),freq='D')
         dfC.index.freq = 'D'
         return dfC
 
@@ -77,7 +79,11 @@ class GetDataFromWorldometer:
 # total cases ve total deaths değişkenleri incelenerek doğru X değeri seçilebilir.
 # doğru X değeri için altta bulunan kodda aa değişkeni incelenip doğru dataların çağırılması sağlanabilir.
 
-#url = "https://www.worldometers.info/coronavirus/country/canada/"
+#url = "https://www.worldometers.info/coronavirus/country/russia/"
 #getData = GetDataFromWorldometer(url)
 #aa = getData.req
 #df = getData.handleData()
+
+    
+    
+    

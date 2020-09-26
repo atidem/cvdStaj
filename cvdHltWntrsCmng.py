@@ -21,6 +21,7 @@ import matplotlib as mt
 import statsmodels as st
 import sklearn as sk
 import worldometerDataHandler as handle
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 #%% Notes 
 ## default test rate 0.2 , replaceable (Ar,Arma,Arima)
 ## worldometer link , replaceable
@@ -29,14 +30,18 @@ import worldometerDataHandler as handle
 ## edited library for keep going to work in exception  "lib\site-packages\numpy\linalg\linalg.py" 
 
 #%%
-
+resultsData = []
+dataPosLenDeath = 0
+dataPosLenCases = 0
 #%% temp method 
 def runAllMethods():
     #%% get data from worldometer's link
+    
+    global dataPosLenCases,dataPosLenDeath
+    
     getData = handle.GetDataFromWorldometer(url)
     df = getData.handleData()
     #%%
-    
     dataLen = len(df)
     #positivity
     dataPosDeath = df[df.Deaths>0]
@@ -47,7 +52,6 @@ def runAllMethods():
     predDayCount = 30
     # total range
     totalIdx = pd.date_range(df.index[0],periods=dataLen+predDayCount,freq='D')
-    
     #df["Cases"][:pd.to_datetime("19.3.2020",format="%d.%m.%Y")]
     
     #%% measure metrics
@@ -80,6 +84,7 @@ def runAllMethods():
     
         dataPos = data[data>0]
         dataPosLen = len(dataPos)
+        dataPos = pd.to_numeric(dataPos,downcast='float')
         #print(dataPos)
         pred = pd.DataFrame(index=totalIdx)
         model = ExponentialSmoothing(dataPos[:dataPosLen],trend=tren,seasonal=seasonal,seasonal_periods=period,damped=damp)
@@ -90,12 +95,12 @@ def runAllMethods():
     
     ## Holt Winters Prediction Section 
     ## default values (alpha=None,beta=None,gamma=None,phi=None,tren=None,seasonal='add',period=None,damp=False)
-    Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',period=12,damp=True)
+    Case_mul_mul = holtWinters(data=df.Cases,alpha=0.25,beta=0.25,gamma=0,tren='mul',seasonal='mul',period=dataPosLenCases-1,damp=True)
     Case_mul_mul.rename(columns={"Fitted_Values":"Cases_hw_tes_mul-mul","Predicted_Values": "Cases_predict_hw_tes_mul"},inplace=True)
     
     Case_add_add = holtWinters(data=df.Cases,alpha=0.9,beta=0.9,gamma=0,tren='add',seasonal='add',period=dataPosLenCases-1,damp=False)
     Case_add_add.rename(columns={"Fitted_Values":"Cases_hw_tes_add-add","Predicted_Values": "Cases_predict_hw_tes_add"},inplace=True)
-    
+
     Death_mul_mul = holtWinters(data=df.Deaths,alpha=0.9,beta=0.9,gamma=0,tren='mul',seasonal='mul',period=dataPosLenDeath-1,damp=True)
     Death_mul_mul.rename(columns={"Fitted_Values":"Deaths_hw_tes_mul","Predicted_Values": "Deaths_predict_hw_tes_mul"},inplace=True) 
     
@@ -149,16 +154,26 @@ def runAllMethods():
     finalDf = pd.concat([finalDf,Cases_Ar,Deaths_Ar],axis=1)
     #%% ARIMA
     
-    #there is something wrong this block
     def arimaParametersFounder(data,startP=0,startQ=0,maxP=10,maxQ=10,testRate=0.2):
         dataPos = data[data>0]
         dataPosLen = len(dataPos)
         
         splitIndex = int(dataPosLen*(1-testRate))
         train = dataPos[:splitIndex]    
-        model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,stationary=False,max_q=maxQ,seasonal=False,trace=True)
+        model = auto_arima(train,start_p=startP,start_q=startQ,max_D=1,max_p=maxP,
+                           stationary=True,max_q=maxQ,seasonal=False,trace=True)
         return model   
-        
+
+    #parameter search
+#    model=arimaParametersFounder(data=df['Cases'])
+#    print(model.summary())
+#    #
+#    model=arimaParametersFounder(data=df['Deaths'])
+#    print(model.summary())
+
+
+
+
     def arima(data,p,d,q,testRate=0.2):
         dataPos = data[data>0]
         dataPosLen = len(dataPos)
@@ -168,23 +183,18 @@ def runAllMethods():
         train = dataPos[:splitIndex]
         test = dataPos[splitIndex:]
     
-        model = ARIMA(train,order=(p,d,q)).fit()
+        model = SARIMAX(train,order=(p,d,q)).fit()
         pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
         pred = pd.DataFrame(pred)
         maev = mae(test,pred[0][:len(test)])
         rmsev = rmse(test,pred[0][:len(test)])
         mapev = mape(pred[0][:len(test)],test)
-        
+
         measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
         
         return pred,measure
     
-    ##parameter search
-    #model=arimaParametersFounder(data=df['Cases'])
-    #model.summary()
-    ##
-    #model=arimaParametersFounder(data=df['Deaths'])
-    #model.summary()
+
     
     # ARIMA Prediction Section
     Cases_Arima,Cases_Arima_Measure = arima(data=df['Cases'],p=2,d=0,q=0)
@@ -206,7 +216,7 @@ def runAllMethods():
         train = dataPos[:splitIndex]
         test = dataPos[splitIndex:]
     
-        model = ARMA(train,order=(p,q)).fit()
+        model = SARIMAX(train,order=(p,0,q)).fit()
         pred = model.predict(start=totalIdx[dataLen-dataPosLen+splitIndex],end=totalIdx[-1])
         pred = pd.DataFrame(pred)
         maev = mae(test,pred[0][:len(test)])
@@ -226,49 +236,49 @@ def runAllMethods():
     finalDf = pd.concat([finalDf,Cases_Arma,Deaths_Arma],axis=1)
     #%% measure
     print("----Cases Measure----")
-    #print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
-    #print("RMSE TES MULT : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
-    #print("MAPE TES MULT : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
-    #print("..............................................................")
-    #print("MAE TES ADD : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
-    #print("RMSE TES ADD : "+str(rmse(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
-    #print("MAPE TES ADD : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
-    #print("..............................................................")
-    print("MAE AR : " + str(Cases_Ar_Measure["mae"]))
+#    print("MAE TES MULT : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
+    print("RMSE TES MULT : "+str(rmse(finalDf['Cases'][dataLen-dataPosLenCases:dataLen],finalDf["Cases_hw_tes_mul-mul"][dataLen-dataPosLenCases:dataLen])))
+#    print("MAPE TES MULT : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_mul-mul"][:dataLen])))
+#    print("..............................................................")
+#    print("MAE TES ADD : "+str(mae(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
+    print("RMSE TES ADD : "+str(rmse(finalDf['Cases'][dataLen-dataPosLenCases:dataLen],finalDf["Cases_hw_tes_add-add"][dataLen-dataPosLenCases:dataLen])))
+#    print("MAPE TES ADD : "+str(mape(finalDf['Cases'][:dataLen],finalDf["Cases_hw_tes_add-add"][:dataLen])))
+#    print("..............................................................")
+#    print("MAE AR : " + str(Cases_Ar_Measure["mae"]))
     print("RMSE AR : " + str(Cases_Ar_Measure["rmse"]))
-    print("MAPE AR : " + str(Cases_Ar_Measure["mape"]))
-    print("..............................................................")
-    print("MAE ARMA : " + str(Cases_Arma_Measure["mae"]))
+#    print("MAPE AR : " + str(Cases_Ar_Measure["mape"]))
+#    print("..............................................................")
+#    print("MAE ARMA : " + str(Cases_Arma_Measure["mae"]))
     print("RMSE ARMA : " + str(Cases_Arma_Measure["rmse"]))
-    print("MAPE ARMA : " + str(Cases_Arma_Measure["mape"]))
-    print("..............................................................")
-    print("MAE ARIMA : " + str(Cases_Arima_Measure["mae"]))
+#    print("MAPE ARMA : " + str(Cases_Arma_Measure["mape"]))
+#    print("..............................................................")
+#    print("MAE ARIMA : " + str(Cases_Arima_Measure["mae"]))
     print("RMSE ARIMA : " + str(Cases_Arima_Measure["rmse"]))
-    print("MAPE ARIMA : " + str(Cases_Arima_Measure["mape"]))
-    print("\n")
-    
+#    print("MAPE ARIMA : " + str(Cases_Arima_Measure["mape"]))
+#    print("\n")
+#    
     print("----Deaths Measure----")
-    #print("MAE TES ADD : "+str(mae(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
-    #print("RMSE TES ADD: "+str(rmse(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
-    #print("MAPE TES ADD: "+str(mape(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
-    #print("..............................................................")
-    #print("MAE TES MULT : "+str(mae(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
-    #print("RMSE TES MULT : "+str(rmse(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
-    #print("MAPE TES MULT : "+str(mape(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
-    #print("..............................................................")
-    print("MAE AR : " + str(Death_Ar_Measure["mae"]))
+#    print("MAE TES ADD : "+str(mae(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
+    print("RMSE TES ADD: "+str(rmse(finalDf['Deaths'][dataLen-dataPosLenDeath:dataLen],finalDf["Deaths_hw_tes_add"][dataLen-dataPosLenDeath:dataLen])))
+#    print("MAPE TES ADD: "+str(mape(finalDf['Deaths'][:dataLen],finalDf["Deaths_hw_tes_add"][:dataLen])))
+#    print("..............................................................")
+#    print("MAE TES MULT : "+str(mae(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
+    print("RMSE TES MULT : "+str(rmse(finalDf['Deaths'][dataLen-dataPosLenDeath:dataLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLenDeath:dataLen])))
+#    print("MAPE TES MULT : "+str(mape(dataPos['Deaths'][:dataPosLen],finalDf["Deaths_hw_tes_mul"][dataLen-dataPosLen:dataLen])))
+#    print("..............................................................")
+#    print("MAE AR : " + str(Death_Ar_Measure["mae"]))
     print("RMSE AR : " + str(Death_Ar_Measure["rmse"]))
-    print("MAPE AR : " + str(Death_Ar_Measure["mape"]))
-    print("..............................................................")
-    print("MAE ARMA : " + str(Deaths_Arma_Measure["mae"]))
+#    print("MAPE AR : " + str(Death_Ar_Measure["mape"]))
+#    print("..............................................................")
+#    print("MAE ARMA : " + str(Deaths_Arma_Measure["mae"]))
     print("RMSE ARMA : " + str(Deaths_Arma_Measure["rmse"]))
-    print("MAPE ARMA : " + str(Deaths_Arma_Measure["mape"]))
-    print("..............................................................")
-    print("MAE ARIMA : " + str(Deaths_Arima_Measure["mae"]))
+#    print("MAPE ARMA : " + str(Deaths_Arma_Measure["mape"]))
+#    print("..............................................................")
+#    print("MAE ARIMA : " + str(Deaths_Arima_Measure["mae"]))
     print("RMSE ARIMA : " + str(Deaths_Arima_Measure["rmse"]))
-    print("MAPE ARIMA : " + str(Deaths_Arima_Measure["mape"]))
-    print("\n")
-    
+#    print("MAPE ARIMA : " + str(Deaths_Arima_Measure["mape"]))
+#    print("\n")
+#    
     
     #%% visualize Holt Winters
     fig,(ax0,ax1) = plt.subplots(2,figsize=(10,7))
@@ -332,16 +342,17 @@ def runAllMethods():
     
     #plt.show()
     #%% print screen (Prediction)
-    pd.set_option("display.max_rows", None, "display.max_columns", None)
-    
-    cols = list(finalDf.columns)
-    
-    for i in cols:
-        print(" Results : "+i)
-        print(finalDf[finalDf[i].notna()][i])
-    
+#    pd.set_option("display.max_rows", None, "display.max_columns", None)
+#    
+#    cols = list(finalDf.columns)
+#    
+#    for i in cols:
+#        print(" Results : "+i)
+#        print(finalDf[finalDf[i].notna()][i])
+#    
     #%% save csv file
-    
+    global resultsData 
+    resultsData = finalDf.copy()
     finalDf.to_csv("predict.csv")
     
     
@@ -373,13 +384,13 @@ while True:
         
 
 #%%optimization tryna
-#from statsmodels.tsa.statespace.sarimax import SARIMAX
+
 #import itertools
 #
-#d = range(0,1)
+#d = range(0,3)
 #p=q=range(0,15)
 #pdq = list(itertools.product(p,d,q))
-#train , test = df.iloc[:60,:] , df.iloc[60:,:]
+#train , test = resultsData.iloc[:60,:] , resultsData.iloc[60:,:]
 #
 #best_pred = list()
 #for param in pdq:
@@ -426,7 +437,7 @@ while True:
 #    measure = {"mae":maev,"rmse":rmsev,"mape":mapev}
 #    
 #    return pred,measure
-#
+
 #Cases_sarimax,Cases_Arma_Measure = sarimax(data=df['Cases'],p=2,q=0,d=9)
 #Deaths_sarimax,Deaths_Arma_Measure = sarimax(data=df['Deaths'],p=3,q=0,d=0)
 #Cases_sarimax.rename(columns={0:"Cases_predict_sarimax"},inplace=True)
